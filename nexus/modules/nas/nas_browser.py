@@ -6,10 +6,22 @@ from __future__ import annotations
 from pathlib import Path
 
 from core.config import CONFIG
-from core.display import error, menu, pause, section, table, warn
+from core.display import error, pause, section, table, warn
 from core.logger import log
 
 MAX_PREVIEW_BYTES = 4096
+
+
+def _nas_root() -> Path:
+    return Path(str(CONFIG.get("nas_root") or CONFIG.get("nas_path", "./nas_storage"))).expanduser().resolve()
+
+
+def _safe_target(path: str | None = None) -> Path:
+    root = _nas_root()
+    target = Path(path).expanduser().resolve() if path else root
+    if target != root and root not in target.parents:
+        raise ValueError("Access denied — outside NAS root.")
+    return target
 
 
 def _format_bytes(num_bytes: int) -> str:
@@ -21,98 +33,66 @@ def _format_bytes(num_bytes: int) -> str:
     return f"{value:.1f} TB"
 
 
-def _safe_child(root: Path, current: Path, raw: str) -> Path:
-    target = (current / raw).expanduser().resolve()
-    root_resolved = root.resolve()
-    if target != root_resolved and root_resolved not in target.parents:
-        raise ValueError("Cannot browse outside the configured NAS path.")
-    return target
+def list_dir(path: str | None = None) -> dict:
+    """Return a JSON-safe directory listing rooted inside configured NAS storage."""
+    try:
+        target = _safe_target(path)
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+    target.mkdir(parents=True, exist_ok=True)
+    try:
+        items = sorted(target.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+    except OSError as exc:
+        return {"error": f"Unable to list directory: {exc}"}
+
+    entries = []
+    for item in items:
+        try:
+            stat = item.stat()
+            size = stat.st_size if item.is_file() else 0
+            mtime = stat.st_mtime
+        except OSError:
+            size = 0
+            mtime = 0
+        entries.append({"name": item.name, "path": str(item), "is_dir": item.is_dir(), "size": size, "mtime": mtime})
+
+    root = _nas_root()
+    return {"current": str(target), "root": str(root), "parent": str(target.parent) if target != root else None, "entries": entries}
 
 
 def list_directory(path: Path) -> list[list[str]]:
-    """Return sorted directory entries for display."""
-    rows: list[list[str]] = []
-    for item in sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
-        try:
-            stat = item.stat()
-        except OSError:
-            rows.append([item.name, "?", "unreadable"])
-            continue
-        rows.append([item.name + ("/" if item.is_dir() else ""), _format_bytes(stat.st_size), "dir" if item.is_dir() else "file"])
-    return rows
+    """Return sorted directory entries for CLI display."""
+    data = list_dir(str(path))
+    if "error" in data:
+        raise OSError(data["error"])
+    return [[e["name"] + ("/" if e["is_dir"] else ""), _format_bytes(e["size"]), "dir" if e["is_dir"] else "file"] for e in data["entries"]]
 
 
 def preview_file(path: Path) -> None:
     section(f"PREVIEW {path.name}")
     try:
-        data = path.read_bytes()[:MAX_PREVIEW_BYTES]
-    except OSError as exc:
+        target = _safe_target(str(path))
+        data = target.read_bytes()[:MAX_PREVIEW_BYTES]
+    except (OSError, ValueError) as exc:
         error(f"Unable to read file: {exc}")
         return
     print(data.decode("utf-8", errors="replace"))
-    if path.stat().st_size > MAX_PREVIEW_BYTES:
+    if target.stat().st_size > MAX_PREVIEW_BYTES:
         warn(f"Preview limited to first {MAX_PREVIEW_BYTES} bytes.")
 
 
 def run() -> None:
-    root = Path(str(CONFIG.get("nas_path", "/mnt/nas"))).expanduser()
-    current = root
-
-    if not root.exists() or not root.is_dir():
-        section("NAS FILE BROWSER")
-        error(f"NAS path is unavailable: {root}")
-        warn("Update data/config.json with a mounted NAS directory.")
-        log(f"NAS browser unavailable for path: {root}", "ERROR")
+    section("NAS FILE BROWSER")
+    data = list_dir()
+    if "error" in data:
+        error(data["error"])
         pause()
         return
-
-    while True:
-        section(f"NAS FILE BROWSER — {current}")
-        try:
-            rows = list_directory(current)
-        except OSError as exc:
-            error(f"Unable to list directory: {exc}")
-            log(f"NAS browser failed to list {current}: {exc}", "ERROR")
-            pause()
-            return
-
-        if rows:
-            table(["Name", "Size", "Type"], rows)
-        else:
-            warn("Directory is empty.")
-
-        choice = menu("BROWSER OPTIONS", ["Open folder", "Go up", "Preview text file"])
-        if choice == "1":
-            name = input("  Folder name: ").strip()
-            try:
-                target = _safe_child(root, current, name)
-            except ValueError as exc:
-                error(str(exc))
-                continue
-            if target.is_dir():
-                current = target
-                log(f"NAS browser opened folder: {current}")
-            else:
-                error("That folder does not exist.")
-        elif choice == "2":
-            if current.resolve() == root.resolve():
-                warn("Already at NAS root.")
-            else:
-                current = current.parent
-        elif choice == "3":
-            name = input("  File name: ").strip()
-            try:
-                target = _safe_child(root, current, name)
-            except ValueError as exc:
-                error(str(exc))
-                continue
-            if target.is_file():
-                preview_file(target)
-                log(f"NAS browser previewed file: {target}")
-                pause("  Press Enter to continue browsing...")
-            else:
-                error("That file does not exist.")
-        elif choice == "0":
-            break
-        else:
-            warn("Invalid selection. Choose a listed option.")
+    rows = [[e["name"], "DIR" if e["is_dir"] else "FILE", _format_bytes(e["size"])] for e in data["entries"]]
+    if rows:
+        table(["Name", "Type", "Size"], rows)
+    else:
+        warn("Directory is empty.")
+    log(f"NAS browser listed {data['current']}")
+    pause()

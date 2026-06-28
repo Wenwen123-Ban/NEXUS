@@ -5,6 +5,48 @@ export interface FileItem {
   size?: string;
   updatedAt: string;
   extension?: string;
+  path?: string;
+}
+
+export interface FileStationEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+  mtime: number;
+}
+
+export interface FileStationResponse {
+  current: string;
+  root: string;
+  parent: string | null;
+  entries: FileStationEntry[];
+}
+
+export interface OverviewResponse {
+  server_name: string;
+  platform: string;
+  cpu_percent: number;
+  ram_percent: number;
+  ram_used_gb: number;
+  ram_total_gb: number;
+  temp_c: number | null;
+  net_dl_kbs: number;
+  net_ul_kbs: number;
+  disk_percent: number;
+  disk_used_gb: number;
+  disk_total_gb: number;
+  disk_free_gb: number;
+  nas_root: string;
+  drives: {
+    device: string;
+    mountpoint: string;
+    fstype: string;
+    percent: number;
+    used_gb: number;
+    total_gb: number;
+    free_gb: number;
+  }[];
 }
 
 export interface NasService {
@@ -34,6 +76,9 @@ export interface SystemStats {
   temp: number;
   networkUp: number; // KB/s
   networkDown: number; // KB/s
+  serverName?: string;
+  platform?: string;
+  nasRoot?: string;
   disks: {
     name: string;
     used: number; // GB

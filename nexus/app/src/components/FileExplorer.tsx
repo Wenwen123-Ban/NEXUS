@@ -20,9 +20,10 @@ import { FileItem } from '../types';
 interface FileExplorerProps {
   files: Record<string, FileItem[]>; // Map of path -> files
   onCreateFolder: (path: string, folderName: string) => void;
-  onUploadFile: (path: string, fileName: string, size: string) => void;
+  onUploadFile: (path: string, file: File) => void;
   onDeleteFile: (path: string, fileId: string) => void;
   onDownloadFile: (file: FileItem) => void;
+  onOpenFolder: (path: string) => Promise<string>;
 }
 
 export default function FileExplorer({ 
@@ -30,20 +31,20 @@ export default function FileExplorer({
   onCreateFolder, 
   onUploadFile, 
   onDeleteFile, 
-  onDownloadFile 
+  onDownloadFile,
+  onOpenFolder
 }: FileExplorerProps) {
   const [currentPath, setCurrentPath] = useState<string>('root');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [uploadFileName, setUploadFileName] = useState('');
-  const [uploadFileSize, setUploadFileSize] = useState('14.2 MB');
+  const [selectedUpload, setSelectedUpload] = useState<File | null>(null);
 
   // Breadcrumbs parsing
   const getBreadcrumbs = () => {
     if (currentPath === 'root') return [{ label: 'NAS Storage', path: 'root' }];
-    const parts = currentPath.split('/');
+    const parts = currentPath.split('/').filter(Boolean);
     const crumbs = [{ label: 'NAS Storage', path: 'root' }];
     let accum = '';
     parts.forEach((part) => {
@@ -53,8 +54,9 @@ export default function FileExplorer({
     return crumbs;
   };
 
-  const handleNavigate = (path: string) => {
-    setCurrentPath(path);
+  const handleNavigate = async (path: string) => {
+    const loadedPath = await onOpenFolder(path);
+    setCurrentPath(loadedPath);
     setSearchQuery('');
   };
 
@@ -74,14 +76,9 @@ export default function FileExplorer({
 
   const handleUploadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadFileName.trim()) return;
-    // Add extension if missing
-    let finalName = uploadFileName.trim();
-    if (!finalName.includes('.')) {
-      finalName += '.zip';
-    }
-    onUploadFile(currentPath, finalName, uploadFileSize);
-    setUploadFileName('');
+    if (!selectedUpload) return;
+    onUploadFile(currentPath, selectedUpload);
+    setSelectedUpload(null);
     setIsUploadModalOpen(false);
   };
 
@@ -151,9 +148,9 @@ export default function FileExplorer({
         {currentPath !== 'root' && (
           <button 
             onClick={() => {
-              const parts = currentPath.split('/');
+              const parts = currentPath.split('/').filter(Boolean);
               parts.pop();
-              setCurrentPath(parts.length ? parts.join('/') : 'root');
+              handleNavigate(parts.length ? '/' + parts.join('/') : 'root');
             }}
             className="p-1 rounded-md bg-slate-900 border border-slate-800 text-slate-400 mr-1 active:scale-95 transition"
           >
@@ -192,7 +189,7 @@ export default function FileExplorer({
               >
                 {/* File Click Handler */}
                 <div 
-                  onClick={() => file.type === 'folder' ? handleNavigate(currentPath === 'root' ? file.name : `${currentPath}/${file.name}`) : null}
+                  onClick={() => file.type === 'folder' && file.path ? handleNavigate(file.path) : null}
                   className={`flex items-center space-x-3 flex-1 min-w-0 ${file.type === 'folder' ? 'cursor-pointer' : ''}`}
                 >
                   <div className="shrink-0">{getFileIcon(file)}</div>
@@ -277,36 +274,21 @@ export default function FileExplorer({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
             <div className="px-4 py-3 border-b border-slate-900 flex justify-between items-center bg-slate-900/40">
-              <span className="font-semibold text-slate-200 text-sm">Upload File Simulator</span>
+              <span className="font-semibold text-slate-200 text-sm">Upload File</span>
               <button onClick={() => setIsUploadModalOpen(false)} className="text-slate-500 hover:text-slate-300">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleUploadSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">File Name</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Choose File</label>
                 <input
-                  type="text"
+                  type="file"
                   required
-                  value={uploadFileName}
-                  onChange={(e) => setUploadFileName(e.target.value)}
-                  placeholder="e.g., invoice.pdf, avatar.png"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 text-sm"
+                  onChange={(e) => setSelectedUpload(e.target.files?.[0] ?? null)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white focus:outline-none focus:border-blue-500 text-sm"
                   autoFocus
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">File Size Preset</label>
-                <select
-                  value={uploadFileSize}
-                  onChange={(e) => setUploadFileSize(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500 text-sm"
-                >
-                  <option value="1.2 MB">Small document (1.2 MB)</option>
-                  <option value="14.5 MB">High-Res Photo (14.5 MB)</option>
-                  <option value="320 MB">Home Video (320 MB)</option>
-                  <option value="1.4 GB">Full HD Movie (1.4 GB)</option>
-                </select>
               </div>
               <div className="flex space-x-2 pt-1">
                 <button
