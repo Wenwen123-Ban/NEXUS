@@ -1,20 +1,5 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# NEXUS Plain Frontend
 
-# Run and deploy your AI Studio app
+This directory contains the plain HTML/CSS/JavaScript frontend converted from the React draft in `nexus/draft/app`.
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/4fa0e359-584c-46a7-bfa0-bd66125d3ff5
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Open `index.html` through the NEXUS web server so `/api/*` requests resolve to the NAS backend.
