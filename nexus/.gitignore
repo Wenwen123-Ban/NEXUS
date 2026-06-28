@@ -11,3 +11,7 @@ app/node_modules/
 data/nas_users.json
 data/nas_tasks.json
 data/.nas_session_secret
+
+# v1.1 — identity and peer data (private, machine-specific)
+data/users.json
+data/peers.json
