@@ -7,3 +7,7 @@ data/config.json
 
 node_modules/
 app/node_modules/
+
+data/nas_users.json
+data/nas_tasks.json
+data/.nas_session_secret
