@@ -27,14 +27,14 @@ import { deleteFile, downloadFile, getFiles, getOverview, uploadFile } from './a
 // Mock initial files structure (dict path -> items)
 const INITIAL_FILES: Record<string, FileItem[]> = {
   'root': [
-    { id: 'f1', name: 'Media', type: 'folder', updatedAt: '2026-06-25' },
-    { id: 'f2', name: 'Backups', type: 'folder', updatedAt: '2026-06-20' },
-    { id: 'f3', name: 'DockerConfigs', type: 'folder', updatedAt: '2026-06-27' },
+    { id: 'f1', name: 'Media', type: 'folder', updatedAt: '2026-06-25', path: 'Media' },
+    { id: 'f2', name: 'Backups', type: 'folder', updatedAt: '2026-06-20', path: 'Backups' },
+    { id: 'f3', name: 'DockerConfigs', type: 'folder', updatedAt: '2026-06-27', path: 'DockerConfigs' },
     { id: 'f4', name: 'nas_manual.pdf', type: 'file', size: '2.4 MB', updatedAt: '2026-05-12', extension: 'pdf' },
   ],
   'Media': [
-    { id: 'm1', name: 'Movies', type: 'folder', updatedAt: '2026-06-24' },
-    { id: 'm2', name: 'Music', type: 'folder', updatedAt: '2026-06-23' },
+    { id: 'm1', name: 'Movies', type: 'folder', updatedAt: '2026-06-24', path: 'Media/Movies' },
+    { id: 'm2', name: 'Music', type: 'folder', updatedAt: '2026-06-23', path: 'Media/Music' },
     { id: 'm3', name: 'family_photo.jpg', type: 'file', size: '4.8 MB', updatedAt: '2026-06-15', extension: 'jpg' }
   ],
   'Media/Movies': [
@@ -50,7 +50,7 @@ const INITIAL_FILES: Record<string, FileItem[]> = {
   ],
   'DockerConfigs': [
     { id: 'd1', name: 'docker-compose.yml', type: 'file', size: '4.1 KB', updatedAt: '2026-06-27', extension: 'yml' },
-    { id: 'd2', name: 'plex_config', type: 'folder', updatedAt: '2026-06-27' }
+    { id: 'd2', name: 'plex_config', type: 'folder', updatedAt: '2026-06-27', path: 'DockerConfigs/plex_config' }
   ],
   'DockerConfigs/plex_config': [
     { id: 'plex1', name: 'Preferences.xml', type: 'file', size: '1.8 KB', updatedAt: '2026-06-27', extension: 'xml' }
@@ -130,6 +130,11 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const normalizePath = (path: string | null | undefined): string | null => {
+    if (!path || path === 'root') return null;
+    return path.replace(/^\/+/, '');
+  };
+
   const mapApiFiles = (entries: Awaited<ReturnType<typeof getFiles>>['entries']): FileItem[] => entries.map((entry) => ({
     id: entry.path,
     name: entry.name,
@@ -141,7 +146,7 @@ export default function App() {
   }));
 
   const refreshFiles = async (path?: string | null) => {
-    const data = await getFiles(path);
+    const data = await getFiles(normalizePath(path));
     const key = data.current;
     setFiles(prev => ({
       ...prev,
@@ -381,10 +386,10 @@ export default function App() {
     triggerToast(`Folder creation is not exposed by the NAS API yet (${folderName})`, 'warn');
   };
 
-  const handleUploadFile = async (_path: string, file: File) => {
+  const handleUploadFile = async (path: string, file: File) => {
     try {
-      const result = await uploadFile(file);
-      await refreshFiles();
+      const result = await uploadFile(file, normalizePath(path));
+      await refreshFiles(path);
       triggerToast(result.message, 'success');
     } catch (error) {
       triggerToast(error instanceof Error ? error.message : 'Upload failed', 'warn');
@@ -394,11 +399,19 @@ export default function App() {
   const handleDeleteFile = async (path: string, fileId: string) => {
     const parentFiles = files[path] || [];
     const itemToDelete = parentFiles.find(f => f.id === fileId);
-    if (!itemToDelete?.path) return;
+    if (!itemToDelete) return;
+    if (!itemToDelete.path) {
+      setFiles(prev => ({
+        ...prev,
+        [path]: (prev[path] || []).filter(file => file.id !== fileId)
+      }));
+      triggerToast(`Removed demo item "${itemToDelete.name}"`, 'info');
+      return;
+    }
 
     try {
       await deleteFile(itemToDelete.path);
-      await refreshFiles(path === 'root' ? null : path);
+      await refreshFiles(path);
       triggerToast(`Deleted "${itemToDelete.name}"`, 'info');
     } catch (error) {
       triggerToast(error instanceof Error ? error.message : 'Delete failed', 'warn');
@@ -416,7 +429,7 @@ export default function App() {
 
   const handleOpenFolder = async (path: string) => {
     try {
-      const data = await refreshFiles(path === 'root' ? null : path);
+      const data = await refreshFiles(path);
       return data.current;
     } catch (error) {
       triggerToast(error instanceof Error ? error.message : 'Unable to open folder', 'warn');
