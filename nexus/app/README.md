@@ -2,4 +2,10 @@
 
 This directory contains the plain HTML/CSS/JavaScript frontend converted from the React draft in `nexus/draft/app`.
 
-Open `index.html` through the NEXUS web server so `/api/*` requests resolve to the NAS backend.
+Launch it from the NEXUS menu with:
+
+1. `python main.py`
+2. `NAS Manager`
+3. `Launch Web Dashboard`
+
+The NAS web option serves this folder directly from Flask at `http://localhost:5000`, so no React, Vite, or separate `npm run dev` process is required.
