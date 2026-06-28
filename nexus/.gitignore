@@ -4,3 +4,6 @@ __pycache__/
 .env
 data/nexus.log
 data/config.json
+
+node_modules/
+app/node_modules/
