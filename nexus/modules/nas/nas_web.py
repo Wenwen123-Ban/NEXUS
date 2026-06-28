@@ -12,6 +12,7 @@ import shutil
 import sys
 from functools import wraps
 from pathlib import Path
+from datetime import timedelta
 from time import time
 from uuid import uuid4
 
@@ -35,6 +36,7 @@ LOG_PATH = ROOT_DIR / "data" / "nexus.log"
 DATA_DIR = ROOT_DIR / "data"
 USERS_PATH = DATA_DIR / "nas_users.json"
 TASKS_PATH = DATA_DIR / "nas_tasks.json"
+FILE_ACCESS_PATH = DATA_DIR / "nas_file_access.json"
 SESSION_SECRET_PATH = DATA_DIR / ".nas_session_secret"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,6 +50,7 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=str(CONFIG.get("nas_cookie_secure", "false")).lower() == "true",
     MAX_CONTENT_LENGTH=int(CONFIG.get("nas_max_upload_mb", 256)) * 1024 * 1024,
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
 )
 CORS(app, supports_credentials=True)
 
@@ -79,6 +82,18 @@ def _tasks() -> dict:
     return _load_json(TASKS_PATH, {})
 
 
+def _file_access() -> dict:
+    return _load_json(FILE_ACCESS_PATH, {"files": {}})
+
+
+def _save_file_access(data: dict) -> None:
+    _save_json(FILE_ACCESS_PATH, data)
+
+
+def _random_password() -> str:
+    return secrets.token_urlsafe(18)
+
+
 def _hash_password(password: str, salt: str | None = None) -> str:
     salt = salt or secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), 260_000).hex()
@@ -101,6 +116,15 @@ def _current_user() -> str | None:
     return str(user) if user else None
 
 
+def _session_user() -> str | None:
+    user = _current_user()
+    if not user:
+        return None
+    session.permanent = True
+    session.modified = True
+    return user
+
+
 def _user_root(username: str | None = None) -> Path:
     username = username or _current_user()
     if not username:
@@ -113,7 +137,7 @@ def _user_root(username: str | None = None) -> Path:
 def _auth_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if _users() and not _current_user():
+        if _users() and not _session_user():
             return _json_error("Authentication required.", 401)
         return fn(*args, **kwargs)
     return wrapper
@@ -129,6 +153,30 @@ def _safe_path(raw_path: str | None = "") -> Path:
     if candidate != root and root not in candidate.parents:
         raise ValueError("Access denied.")
     return candidate
+
+
+def _record_file_access(path: Path, owner: str | None = None, shared_with: list[str] | None = None) -> None:
+    user = owner or _current_user() or "default"
+    data = _file_access()
+    key = str(path.resolve())
+    entry = data.setdefault("files", {}).setdefault(key, {})
+    entry.setdefault("owner", user)
+    entry.setdefault("shared_with", shared_with or [])
+    entry["updated_at"] = int(time())
+    _save_file_access(data)
+
+
+def _access_for(path: Path) -> dict:
+    current = _current_user()
+    key = str(path.resolve())
+    entry = _file_access().get("files", {}).get(key)
+    if not entry:
+        entry = {"owner": current or "default", "shared_with": []}
+    return {
+        "owner": entry.get("owner"),
+        "shared_with": entry.get("shared_with", []),
+        "can_access": not current or entry.get("owner") == current or current in entry.get("shared_with", []),
+    }
 
 
 def _public_path(path: Path) -> str:
@@ -166,27 +214,27 @@ def web_asset(filename: str):
 def api_auth_status():
     users = _users()
     user = _current_user()
-    return jsonify({"authenticated": bool(user), "user": user, "registration_open": not bool(users)})
+    return jsonify({"authenticated": bool(user), "user": user, "registration_open": True, "session_minutes": 30})
 
 
 @app.route("/api/auth/register", methods=["POST"])
 def api_auth_register():
-    if _users():
-        return _json_error("Registration is closed because a NAS account already exists.", 403)
     payload = request.get_json(silent=True) or {}
     username = secure_filename(str(payload.get("username") or "")).lower()
-    password = str(payload.get("password") or "")
+    password = str(payload.get("password") or "") or _random_password()
     if len(username) < 3:
         return _json_error("Username must be at least 3 characters.", 400)
-    if len(password) < 8:
-        return _json_error("Password must be at least 8 characters.", 400)
-    users = {username: {"password": _hash_password(password), "created_at": int(time())}}
+    users = _users()
+    if username in users:
+        return _json_error("Username already exists.", 409)
+    users[username] = {"password": _hash_password(password), "created_at": int(time())}
     _save_json(USERS_PATH, users)
     _user_root(username)
     session.clear()
+    session.permanent = True
     session["nas_user"] = username
     log(f"NAS user registered: {username}")
-    return jsonify({"message": "Account created.", "user": username})
+    return jsonify({"message": "Account created.", "user": username, "generated_password": password})
 
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -198,8 +246,9 @@ def api_auth_login():
     if not user or not _verify_password(password, user.get("password", "")):
         return _json_error("Invalid username or password.", 401)
     session.clear()
+    session.permanent = True
     session["nas_user"] = username
-    return jsonify({"message": "Signed in.", "user": username})
+    return jsonify({"message": "Signed in.", "user": username, "session_minutes": 30})
 
 
 @app.route("/api/auth/logout", methods=["POST"])
@@ -225,7 +274,13 @@ def api_files():
     except ValueError as exc:
         return _json_error(str(exc), 403)
     data = list_dir(str(target))
-    return (jsonify(data), 403) if "error" in data else jsonify(data)
+    if "error" in data:
+        return jsonify(data), 403
+    for entry in data.get("entries", []):
+        entry_path = Path(entry.get("path", ""))
+        full = target if str(entry_path) in ("", ".") else (entry_path.resolve() if entry_path.is_absolute() else (_user_root() / entry_path).resolve())
+        entry["access"] = _access_for(full)
+    return jsonify(data)
 
 
 @app.route("/api/folder", methods=["POST"])
@@ -249,6 +304,7 @@ def api_folder():
         return _json_error("Folder already exists.", 409)
     except OSError as exc:
         return _json_error(f"Unable to create folder: {exc}", 500)
+    _record_file_access(target)
     log(f"Created folder: {target}")
     return jsonify({"message": "Folder created.", "path": str(target)})
 
@@ -272,6 +328,7 @@ def api_upload():
     if dest != root and root not in dest.parents:
         return _json_error("Access denied.", 403)
     upload.save(dest)
+    _record_file_access(dest)
     size = dest.stat().st_size
     log(f"Upload: {filename} ({size} bytes) -> {dest}")
     return jsonify({"message": f"{filename} uploaded successfully.", "path": str(dest), "size": size})
