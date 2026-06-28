@@ -23,7 +23,7 @@ both the sender and the receiver simultaneously.
 
 ```
 Without NEXUS ID:
-  Anyone who opens NEXUS on your machine gets full access.
+  Anyone who opens NEXUS on the machine gets full access.
   LAN chat has no identity — messages arrive with no name.
 
 Without NEXUS LINK:
