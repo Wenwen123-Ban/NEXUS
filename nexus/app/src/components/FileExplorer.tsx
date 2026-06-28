@@ -26,6 +26,11 @@ interface FileExplorerProps {
   onOpenFolder: (path: string) => Promise<string>;
 }
 
+const normalizeNavigationPath = (path: string): string => {
+  if (path === 'root') return 'root';
+  return path.replace(/^\/+/, '');
+};
+
 export default function FileExplorer({ 
   files, 
   onCreateFolder, 
@@ -44,7 +49,7 @@ export default function FileExplorer({
   // Breadcrumbs parsing
   const getBreadcrumbs = () => {
     if (currentPath === 'root') return [{ label: 'NAS Storage', path: 'root' }];
-    const parts = currentPath.split('/').filter(Boolean);
+    const parts = normalizeNavigationPath(currentPath).split('/').filter(Boolean);
     const crumbs = [{ label: 'NAS Storage', path: 'root' }];
     let accum = '';
     parts.forEach((part) => {
@@ -55,12 +60,12 @@ export default function FileExplorer({
   };
 
   const handleNavigate = async (path: string) => {
-    const loadedPath = await onOpenFolder(path);
-    setCurrentPath(loadedPath);
+    const loadedPath = await onOpenFolder(normalizeNavigationPath(path));
+    setCurrentPath(normalizeNavigationPath(loadedPath));
     setSearchQuery('');
   };
 
-  const currentFiles = files[currentPath] || [];
+  const currentFiles = files[currentPath] || files[normalizeNavigationPath(currentPath)] || [];
 
   const filteredFiles = currentFiles.filter(f => 
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -148,9 +153,9 @@ export default function FileExplorer({
         {currentPath !== 'root' && (
           <button 
             onClick={() => {
-              const parts = currentPath.split('/').filter(Boolean);
+              const parts = normalizeNavigationPath(currentPath).split('/').filter(Boolean);
               parts.pop();
-              handleNavigate(parts.length ? '/' + parts.join('/') : 'root');
+              handleNavigate(parts.length ? parts.join('/') : 'root');
             }}
             className="p-1 rounded-md bg-slate-900 border border-slate-800 text-slate-400 mr-1 active:scale-95 transition"
           >

@@ -1,13 +1,23 @@
-import { FileStationResponse, OverviewResponse } from './types';
+import type { FileStationResponse, OverviewResponse } from './types';
 
 const BASE = '/api';
 
 async function parseJson<T>(res: Response): Promise<T> {
-  const data = await res.json();
+  const contentType = res.headers.get('content-type') ?? '';
+  const body = contentType.includes('application/json') ? await res.json() : await res.text();
+
   if (!res.ok) {
-    throw new Error(data?.error || data?.message || `Request failed with ${res.status}`);
+    const message = typeof body === 'object' && body !== null
+      ? (body as { error?: string; message?: string }).error || (body as { message?: string }).message
+      : body;
+    throw new Error(message || `Request failed with ${res.status}`);
   }
-  return data;
+
+  if (!contentType.includes('application/json')) {
+    throw new Error('Expected a JSON response from the NAS API');
+  }
+
+  return body as T;
 }
 
 export async function getOverview(): Promise<OverviewResponse> {
@@ -21,10 +31,11 @@ export async function getFiles(path?: string | null): Promise<FileStationRespons
   return parseJson<FileStationResponse>(res);
 }
 
-export async function uploadFile(file: File): Promise<{ message: string; path: string; size: number }> {
+export async function uploadFile(file: File, path?: string | null): Promise<{ message: string; path: string; size: number }> {
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${BASE}/upload`, { method: 'POST', body: form });
+  const url = path ? `${BASE}/upload?path=${encodeURIComponent(path)}` : `${BASE}/upload`;
+  const res = await fetch(url, { method: 'POST', body: form });
   return parseJson<{ message: string; path: string; size: number }>(res);
 }
 
