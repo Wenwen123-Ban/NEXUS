@@ -24,6 +24,8 @@ DEFAULTS: dict[str, Any] = {
     "ram_alert_threshold": 85,
     "disk_alert_threshold": 90,
     "ping_range": "192.168.1.1-254",
+    "auth_log_path": "/var/log/auth.log",
+    "security_log_paths": ["/var/log/auth.log", "/var/log/secure", "/var/log/syslog"],
 }
 
 
