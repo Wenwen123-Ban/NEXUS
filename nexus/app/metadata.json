@@ -1,0 +1,6 @@
+{
+  "name": "NAS Mobile Front-End",
+  "description": "A high-fidelity mobile-first web interface for managing Network Attached Storage (NAS), featuring resource monitoring, file exploration, service controls, and active download management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
