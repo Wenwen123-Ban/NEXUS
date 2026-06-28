@@ -1,13 +1,69 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>my-react-app</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS NAS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="phone-shell">
+    <header class="status-bar">
+      <span id="current-time">12:00 PM</span>
+      <span class="status-icons">▰ ᯤ 🔋</span>
+    </header>
+
+    <main class="app-frame">
+      <section class="hero-card">
+        <div>
+          <p class="eyebrow">NEXUS PY NAS</p>
+          <h1 id="server-title">NAS-Server-01</h1>
+          <p id="server-subtitle">NAS • Uptime: --</p>
+        </div>
+        <button class="icon-button" id="control-toggle" title="Control Center">☰</button>
+      </section>
+
+      <section class="control-center hidden" id="control-center">
+        <button data-toast="Wake-on-LAN packet queued">⚡ Wake</button>
+        <button data-toast="Fan curve set to balanced">🌀 Fans</button>
+        <button data-toast="Security scan started">🛡 Scan</button>
+      </section>
+
+      <section class="toast hidden" id="toast" role="status"></section>
+
+      <section class="tab-panel" id="dashboard-panel"></section>
+      <section class="tab-panel hidden" id="files-panel"></section>
+      <section class="tab-panel hidden" id="apps-panel"></section>
+      <section class="tab-panel hidden" id="tasks-panel"></section>
+    </main>
+
+    <nav class="bottom-tabs" aria-label="Primary">
+      <button class="active" data-tab="dashboard">▦<span>Dashboard</span></button>
+      <button data-tab="files">📁<span>Files</span></button>
+      <button data-tab="apps">▣<span>Apps</span></button>
+      <button data-tab="tasks">↓<span>Tasks</span></button>
+    </nav>
+  </div>
+
+  <div class="modal hidden" id="folder-modal">
+    <form class="modal-card" id="folder-form">
+      <div class="modal-head"><strong>Create Folder</strong><button type="button" data-close-modal>×</button></div>
+      <label>Folder Name<input id="folder-name" required placeholder="e.g., Photos"></label>
+      <div class="modal-actions"><button type="button" data-close-modal>Cancel</button><button type="submit">Create</button></div>
+    </form>
+  </div>
+
+  <div class="modal hidden" id="upload-modal">
+    <form class="modal-card" id="upload-form">
+      <div class="modal-head"><strong>Upload File</strong><button type="button" data-close-modal>×</button></div>
+      <label>Select File<input id="upload-file" type="file" required></label>
+      <div class="modal-actions"><button type="button" data-close-modal>Cancel</button><button type="submit">Upload</button></div>
+    </form>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
 </html>
