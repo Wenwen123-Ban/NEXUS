@@ -1,0 +1,12 @@
+{
+    "sender_email": "your_email@gmail.com",
+    "sender_password": "your_app_password",
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "alert_email": "your_email@gmail.com",
+    "nas_path": "/mnt/nas",
+    "cpu_alert_threshold": 90,
+    "ram_alert_threshold": 85,
+    "disk_alert_threshold": 90,
+    "ping_range": "192.168.1.1-254"
+}
