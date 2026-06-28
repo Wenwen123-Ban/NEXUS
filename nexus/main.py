@@ -6,13 +6,24 @@ from __future__ import annotations
 
 from core.display import banner, clear, menu, warn
 from core.logger import log
+from modules.identity.auth import is_first_run, login
+from modules.identity.user_setup import run_setup
 
 
 def main() -> None:
     log("NEXUS session started.")
+    clear()
+    if is_first_run():
+        run_setup()
+
+    user = login()
+    if user is None:
+        print("\n  [✗] Access denied. Exiting NEXUS.")
+        return
+
     while True:
         clear()
-        banner()
+        banner(username=str(user.get("username", "")))
         choice = menu(
             "MAIN MENU",
             [
@@ -22,6 +33,8 @@ def main() -> None:
                 "System Monitor",
                 "Email Tools",
                 "Task Scheduler",
+                "NEXUS LINK — LAN Chat",
+                "My Identity",
             ],
         )
 
@@ -49,6 +62,14 @@ def main() -> None:
             from modules.scheduler import scheduler_menu
 
             scheduler_menu()
+        elif choice == "7":
+            from modules.link import link_menu
+
+            link_menu(user)
+        elif choice == "8":
+            from modules.identity import identity_menu
+
+            user = identity_menu(user)
         elif choice == "0":
             log("NEXUS session ended.")
             print("\n[✓] Goodbye.\n")
