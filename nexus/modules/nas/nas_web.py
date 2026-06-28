@@ -20,7 +20,8 @@ if str(ROOT_DIR) not in sys.path:
 from core.config import CONFIG  # noqa: E402
 from core.logger import log  # noqa: E402
 
-WEB_DIR = ROOT_DIR / "app"
+WEB_DIR_CANDIDATES = (ROOT_DIR / "app", ROOT_DIR)
+WEB_DIR = next((path for path in WEB_DIR_CANDIDATES if (path / "index.html").is_file()), ROOT_DIR)
 NAS_ROOT = Path(str(CONFIG.get("nas_root") or CONFIG.get("nas_path", "./nas_storage"))).expanduser().resolve()
 UPLOAD_PATH = Path(str(CONFIG.get("nas_upload_path", str(NAS_ROOT / "uploads")))).expanduser().resolve()
 DOWNLOAD_PATH = Path(str(CONFIG.get("nas_download_path", str(NAS_ROOT / "downloads")))).expanduser().resolve()
@@ -172,7 +173,7 @@ def run() -> None:
 
     url = "http://localhost:5000"
     print(f"\n  [→] NEXUS NAS web dashboard running on {url}")
-    print("  [→] Serving nexus/app directly; no React or Vite server is required.")
+    print(f"  [→] Serving dashboard files from {WEB_DIR}")
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
