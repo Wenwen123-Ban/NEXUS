@@ -15,7 +15,7 @@ python main.py
 
 ## Build Phases
 - [x] Phase 1 — Shell & Core Utilities
-- [ ] Phase 2 — System Monitor
+- [x] Phase 2 — System Monitor
 - [ ] Phase 3 — Network Tools
 - [ ] Phase 4 — NAS Manager
 - [ ] Phase 5 — Security Center
