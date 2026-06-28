@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { NasTask } from '../types';
 
-interface TaskListProps {
+interface TaskList {
   tasks:          NasTask[];
   onAddTask:      (link: string) => void;
   onPauseTask:    (id: string) => void;
