@@ -37,22 +37,23 @@ def sync_folder(source: Path, destination: Path) -> tuple[int, int]:
 
 def run() -> None:
     section("NAS FOLDER SYNC")
-    nas_root = Path(str(CONFIG.get("nas_path", "/mnt/nas"))).expanduser()
-    if not nas_root.exists() or not nas_root.is_dir():
-        error(f"NAS path is unavailable: {nas_root}")
-        warn("Update data/config.json with a mounted NAS directory before syncing.")
-        log(f"NAS sync unavailable for path: {nas_root}", "ERROR")
+    nas_root = Path(str(CONFIG.get("nas_root") or CONFIG.get("nas_path", "/mnt/nas"))).expanduser()
+    nas_root.mkdir(parents=True, exist_ok=True)
+
+    configured_source = str(CONFIG.get("nas_sync_source", "")).strip()
+    if not configured_source:
+        error("nas_sync_source is not configured in data/config.json.")
+        warn("Set nas_sync_source to the local folder that should mirror into NAS storage.")
         pause()
         return
 
-    source = Path(input("  Local folder to sync: ").strip()).expanduser()
+    source = Path(configured_source).expanduser()
     if not source.exists() or not source.is_dir():
         error("Source folder does not exist or is not a directory.")
         pause()
         return
 
-    dest_name = input(f"  Destination folder under NAS [{source.name}]: ").strip() or source.name
-    destination = (nas_root / dest_name).resolve()
+    destination = (nas_root / source.name).resolve()
     nas_resolved = nas_root.resolve()
     if destination != nas_resolved and nas_resolved not in destination.parents:
         error("Destination must stay inside the configured NAS path.")
@@ -63,12 +64,6 @@ def run() -> None:
     table(["Source", "Destination", "Files"], [[str(source), str(destination), len(files)]])
     if not files:
         warn("No files found to sync.")
-        pause()
-        return
-
-    confirm = input("  Copy new/updated files now? [y/N]: ").strip().lower()
-    if confirm != "y":
-        warn("Sync cancelled.")
         pause()
         return
 

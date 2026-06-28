@@ -21,7 +21,7 @@ export default function Dashboard({ stats, uptime }: DashboardProps) {
   // Calculate total used and total capacity across all disks
   const totalUsed = stats.disks.reduce((acc, disk) => acc + disk.used, 0);
   const totalCap = stats.disks.reduce((acc, disk) => acc + disk.total, 0);
-  const storagePercentage = Math.round((totalUsed / totalCap) * 100);
+  const storagePercentage = totalCap > 0 ? Math.round((totalUsed / totalCap) * 100) : 0;
 
   // Format network speeds for humans
   const formatSpeed = (kbps: number) => {
@@ -40,8 +40,8 @@ export default function Dashboard({ stats, uptime }: DashboardProps) {
             <Server className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-100 text-sm">NAS-Server-01</h3>
-            <p className="text-xs text-slate-400">Uptime: {uptime}</p>
+            <h3 className="font-semibold text-slate-100 text-sm">{stats.serverName || 'NAS-Server-01'}</h3>
+            <p className="text-xs text-slate-400">{stats.platform || 'NAS'} • Uptime: {uptime}</p>
           </div>
         </div>
         <div className="flex items-center space-x-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
@@ -161,7 +161,7 @@ export default function Dashboard({ stats, uptime }: DashboardProps) {
                 <span className="text-[10px] text-slate-500 font-mono">{(disk.total / 1024).toFixed(1)} TB</span>
               </div>
               <div className="flex items-center space-x-3 font-mono text-slate-400">
-                <span>{Math.round((disk.used / disk.total) * 100)}% full</span>
+                <span>{disk.total > 0 ? Math.round((disk.used / disk.total) * 100) : 0}% full</span>
                 <span className="flex items-center text-slate-400 border-l border-slate-800 pl-2.5">
                   <Thermometer className="w-3 h-3 text-amber-500/80 mr-0.5" />
                   {disk.temp}°C

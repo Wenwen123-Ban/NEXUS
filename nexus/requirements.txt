@@ -2,3 +2,5 @@ psutil
 rich
 schedule
 paramiko
+flask
+flask-cors

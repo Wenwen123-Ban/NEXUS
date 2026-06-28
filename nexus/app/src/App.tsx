@@ -8,7 +8,6 @@ import {
   Signal, 
   Battery, 
   Sliders, 
-  ChevronDown, 
   Bell, 
   Info, 
   Power,
@@ -22,7 +21,8 @@ import Dashboard from './components/Dashboard';
 import FileExplorer from './components/FileExplorer';
 import ServicesManager from './components/ServicesManager';
 import TaskList from './components/TaskList';
-import { SystemStats, FileItem, NasService, NasTask, SystemLog } from './types';
+import { SystemStats, FileItem, NasService, NasTask } from './types';
+import { deleteFile, downloadFile, getFiles, getOverview, uploadFile } from './api';
 
 // Mock initial files structure (dict path -> items)
 const INITIAL_FILES: Record<string, FileItem[]> = {
@@ -58,6 +58,13 @@ const INITIAL_FILES: Record<string, FileItem[]> = {
 };
 
 // Initial docker container services
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / Math.pow(1024, index)).toFixed(1)} ${units[index]}`;
+};
+
 const INITIAL_SERVICES: NasService[] = [
   { id: 's1', name: 'Plex Media Server', category: 'media', status: 'running', port: 32400, uptime: '12d 4h', cpuUsage: 4.2, ramUsage: 184 },
   { id: 's2', name: 'Pi-hole DNS', category: 'network', status: 'running', port: 8080, uptime: '32d 18h', cpuUsage: 0.8, ramUsage: 45 },
@@ -91,6 +98,9 @@ export default function App() {
     temp: 41,
     networkUp: 84, // KB/s
     networkDown: 1420, // KB/s
+    serverName: 'NAS-Server-01',
+    platform: 'NAS',
+    nasRoot: 'root',
     disks: [
       { name: 'Drive 1 (WD Red Pro)', used: 2840, total: 3726, temp: 36, status: 'healthy' },
       { name: 'Drive 2 (WD Red Pro)', used: 2840, total: 3726, temp: 37, status: 'healthy' },
@@ -118,6 +128,74 @@ export default function App() {
     updateTime();
     const interval = setInterval(updateTime, 15000);
     return () => clearInterval(interval);
+  }, []);
+
+  const mapApiFiles = (entries: Awaited<ReturnType<typeof getFiles>>['entries']): FileItem[] => entries.map((entry) => ({
+    id: entry.path,
+    name: entry.name,
+    path: entry.path,
+    type: entry.is_dir ? 'folder' : 'file',
+    size: entry.is_dir ? undefined : formatBytes(entry.size),
+    updatedAt: entry.mtime ? new Date(entry.mtime * 1000).toISOString().split('T')[0] : 'unknown',
+    extension: entry.name.includes('.') ? entry.name.split('.').pop() : undefined
+  }));
+
+  const refreshFiles = async (path?: string | null) => {
+    const data = await getFiles(path);
+    const key = data.current;
+    setFiles(prev => ({
+      ...prev,
+      root: key === data.root ? mapApiFiles(data.entries) : prev.root,
+      [key]: mapApiFiles(data.entries)
+    }));
+    return data;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadOverview = async () => {
+      try {
+        const overview = await getOverview();
+        if (cancelled) return;
+        setStats({
+          serverName: overview.server_name,
+          platform: overview.platform,
+          nasRoot: overview.nas_root,
+          cpu: overview.cpu_percent,
+          ram: overview.ram_percent,
+          temp: overview.temp_c ?? 0,
+          networkUp: overview.net_ul_kbs,
+          networkDown: overview.net_dl_kbs,
+          disks: (overview.drives.length ? overview.drives : [{
+            device: overview.nas_root,
+            mountpoint: overview.nas_root,
+            fstype: 'nas',
+            percent: overview.disk_percent,
+            used_gb: overview.disk_used_gb,
+            total_gb: overview.disk_total_gb,
+            free_gb: overview.disk_free_gb
+          }]).map((drive) => ({
+            name: drive.device || drive.mountpoint,
+            used: drive.used_gb,
+            total: drive.total_gb,
+            temp: overview.temp_c ?? 0,
+            status: drive.percent > 90 ? 'critical' : drive.percent > 75 ? 'warning' : 'healthy'
+          }))
+        });
+      } catch (error) {
+        console.warn('Failed to load NAS overview', error);
+      }
+    };
+    loadOverview();
+    const interval = setInterval(loadOverview, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    refreshFiles().catch((error) => console.warn('Failed to load NAS files', error));
   }, []);
 
   // 2. Active system simulation loops
@@ -299,130 +377,51 @@ export default function App() {
   };
 
   // 4. File Manager Handlers
-  const handleCreateFolder = (path: string, folderName: string) => {
-    // Check duplication
-    const folderKey = path === 'root' ? folderName : `${path}/${folderName}`;
-    const parentFiles = files[path] || [];
-
-    if (parentFiles.some(f => f.name === folderName && f.type === 'folder')) {
-      triggerToast(`Folder "${folderName}" already exists!`, 'warn');
-      return;
-    }
-
-    const newFolderItem: FileItem = {
-      id: 'fol-' + Math.random().toString(36).substring(2, 9),
-      name: folderName,
-      type: 'folder',
-      updatedAt: new Date().toISOString().split('T')[0]
-    };
-
-    setFiles(prev => ({
-      ...prev,
-      [path]: [...parentFiles, newFolderItem],
-      [folderKey]: [] // Init empty list in simulated directory tree
-    }));
-
-    triggerToast(`Created folder "${folderName}"`, 'success');
+  const handleCreateFolder = (_path: string, folderName: string) => {
+    triggerToast(`Folder creation is not exposed by the NAS API yet (${folderName})`, 'warn');
   };
 
-  const handleUploadFile = (path: string, fileName: string, size: string) => {
-    const parentFiles = files[path] || [];
-
-    if (parentFiles.some(f => f.name === fileName && f.type === 'file')) {
-      triggerToast(`File "${fileName}" already exists!`, 'warn');
-      return;
+  const handleUploadFile = async (_path: string, file: File) => {
+    try {
+      const result = await uploadFile(file);
+      await refreshFiles();
+      triggerToast(result.message, 'success');
+    } catch (error) {
+      triggerToast(error instanceof Error ? error.message : 'Upload failed', 'warn');
     }
-
-    const fileExt = fileName.split('.').pop() || 'dat';
-
-    // Simulate uploading by first starting a quick background sync task
-    const uploadTaskId = 'task-up-' + Math.random().toString(36).substring(2, 9);
-    const mockUploadTask: NasTask = {
-      id: uploadTaskId,
-      name: `Uploading: ${fileName}`,
-      type: 'sync',
-      progress: 0,
-      speed: '12.5 MB/s',
-      eta: '12s',
-      status: 'active'
-    };
-
-    setTasks(prev => [mockUploadTask, ...prev]);
-    setActiveTab('tasks');
-    triggerToast(`Upload initiated for ${fileName}...`, 'info');
-
-    // Create a delayed process to append the file to directories upon task success!
-    setTimeout(() => {
-      setFiles(prev => {
-        const currParentFiles = prev[path] || [];
-        if (currParentFiles.some(f => f.name === fileName)) return prev;
-
-        const newFileItem: FileItem = {
-          id: 'file-' + Math.random().toString(36).substring(2, 9),
-          name: fileName,
-          type: 'file',
-          size,
-          updatedAt: new Date().toISOString().split('T')[0],
-          extension: fileExt
-        };
-
-        return {
-          ...prev,
-          [path]: [newFileItem, ...currParentFiles]
-        };
-      });
-      
-      // Clean up the upload task
-      setTasks(currentTasks => currentTasks.filter(t => t.id !== uploadTaskId));
-      triggerToast(`Successfully uploaded ${fileName}`, 'success');
-    }, 8000);
   };
 
-  const handleDeleteFile = (path: string, fileId: string) => {
+  const handleDeleteFile = async (path: string, fileId: string) => {
     const parentFiles = files[path] || [];
     const itemToDelete = parentFiles.find(f => f.id === fileId);
-    if (!itemToDelete) return;
+    if (!itemToDelete?.path) return;
 
-    setFiles(prev => {
-      const nextDirContent = parentFiles.filter(f => f.id !== fileId);
-      const nextState = { ...prev, [path]: nextDirContent };
-      
-      // If it's a folder, recursively delete its children keys for robust cleanup
-      if (itemToDelete.type === 'folder') {
-        const targetKey = path === 'root' ? itemToDelete.name : `${path}/${itemToDelete.name}`;
-        Object.keys(nextState).forEach(key => {
-          if (key === targetKey || key.startsWith(targetKey + '/')) {
-            delete nextState[key];
-          }
-        });
-      }
-      return nextState;
-    });
-
-    triggerToast(`Deleted "${itemToDelete.name}"`, 'info');
+    try {
+      await deleteFile(itemToDelete.path);
+      await refreshFiles(path === 'root' ? null : path);
+      triggerToast(`Deleted "${itemToDelete.name}"`, 'info');
+    } catch (error) {
+      triggerToast(error instanceof Error ? error.message : 'Delete failed', 'warn');
+    }
   };
 
   const handleDownloadFile = (file: FileItem) => {
-    // Register a download queue task starting from 0%
-    const duplicate = tasks.find(t => t.name === file.name && t.status === 'active');
-    if (duplicate) {
-      triggerToast(`Download for "${file.name}" is already in progress!`, 'warn');
+    if (!file.path) {
+      triggerToast(`Cannot download "${file.name}" without a NAS path`, 'warn');
       return;
     }
+    downloadFile(file.path);
+    triggerToast(`Downloading "${file.name}"`, 'info');
+  };
 
-    const downloadTask: NasTask = {
-      id: 'task-dl-' + Math.random().toString(36).substring(2, 9),
-      name: file.name,
-      type: 'download',
-      progress: 0,
-      speed: '14.1 MB/s',
-      eta: '45s',
-      status: 'active'
-    };
-
-    setTasks(prev => [downloadTask, ...prev]);
-    setActiveTab('tasks');
-    triggerToast(`Added "${file.name}" to the active download queue`, 'info');
+  const handleOpenFolder = async (path: string) => {
+    try {
+      const data = await refreshFiles(path === 'root' ? null : path);
+      return data.current;
+    } catch (error) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to open folder', 'warn');
+      return path;
+    }
   };
 
   // 5. Service Switcheboard Handlers
@@ -697,6 +696,7 @@ export default function App() {
               onCreateFolder={handleCreateFolder}
               onUploadFile={handleUploadFile}
               onDeleteFile={handleDeleteFile}
+              onOpenFolder={handleOpenFolder}
               onDownloadFile={handleDownloadFile}
             />
           )}

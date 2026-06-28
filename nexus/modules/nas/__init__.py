@@ -9,6 +9,7 @@ def nas_menu():
             "Disk Usage Monitor",
             "File Browser",
             "Folder Sync",
+            "Launch Web Dashboard",
         ])
         if choice == "1":
             from modules.nas.nas_monitor import run
@@ -18,6 +19,9 @@ def nas_menu():
             run()
         elif choice == "3":
             from modules.nas.nas_sync import run
+            run()
+        elif choice == "4":
+            from modules.nas.nas_web import run
             run()
         elif choice == "0":
             break
