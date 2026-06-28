@@ -1,6 +1,4 @@
-// ✅ Fixed imports
-  // ← now works after Step 1
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   Download,
   Play,
@@ -10,13 +8,10 @@ import {
   CheckCircle,
   AlertCircle,
   TrendingDown,
-  TrendingUp,
   Clock,
-  RefreshCw,    // ← replaces FolderSync if needed
-  Heart,
-  TaskListProps,
+  RefreshCw,
 } from 'lucide-react';
-import { NasTask } from '../types'; 
+import type { NasTask } from '../types';
 
 interface TaskListProps {
   tasks:          NasTask[];
@@ -36,7 +31,6 @@ export default function TaskList({
   const [downloadLink, setDownloadLink] = useState('');
   const [isAddOpen, setIsAddOpen]       = useState(false);
 
-  // ✅ FormEvent properly typed
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!downloadLink.trim()) return;
@@ -45,8 +39,7 @@ export default function TaskList({
     setIsAddOpen(false);
   };
 
-  // ✅ RefreshCw replaces FolderSync
-  const getTaskIcon = (type: string) => {
+  const getTaskIcon = (type: NasTask['type']) => {
     switch (type) {
       case 'download': return <Download   className="w-5 h-5 text-blue-400" />;
       case 'backup':   return <CheckCircle className="w-5 h-5 text-emerald-400" />;
