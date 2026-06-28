@@ -17,6 +17,12 @@ python main.py
 - [x] Phase 1 — Shell & Core Utilities
 - [x] Phase 2 — System Monitor
 - [x] Phase 3 — Network Tools
-- [ ] Phase 4 — NAS Manager
+- [x] Phase 4 — NAS Manager
 - [ ] Phase 5 — Security Center
 - [ ] Phase 6 — Task Scheduler
+
+
+## Phase 4 Checklist — NAS Manager
+- [x] Disk usage monitor validates the configured NAS path and reports used, free, total, percentage, and threshold status.
+- [x] File browser lists NAS folders/files, supports safe navigation, and previews text files without leaving the NAS root.
+- [x] Folder sync copies new or updated local files into the NAS path while preserving metadata.
