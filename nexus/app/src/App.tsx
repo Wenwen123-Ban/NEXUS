@@ -353,7 +353,7 @@ export default function App() {
           });
         }
 
-        return updated;
+        return updated as NasTask[];
       });
 
     }, 2000);
@@ -543,7 +543,7 @@ export default function App() {
       <div className="absolute bottom-[-10%] right-[-20%] w-[80%] h-[60%] bg-indigo-950/20 rounded-full filter blur-[120px] pointer-events-none animate-pulse" style={{ animationDuration: '15s' }}></div>
 
       {/* Responsive Smartphone Container Shell */}
-      <div className="relative w-full max-w-md h-screen md:h-[860px] bg-slate-950 md:rounded-[48px] md:border-[10px] md:border-slate-800 md:shadow-2xl md:ring-4 md:ring-slate-900/40 overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-md h-screen  bg-slate-950 md:rounded-[48px] md:border-[10px] md:border-slate-800 md:shadow-2xl md:ring-4 md:ring-slate-900/40 overflow-hidden flex flex-col">
         
         {/* Notch / Speaker representation on desktop */}
         <div className="hidden md:block absolute top-0 left-1/2 transform -translate-x-1/2 w-36 h-6 bg-slate-800 rounded-b-2xl z-50">
@@ -670,7 +670,7 @@ export default function App() {
         {/* 3. Top Banner App Bar */}
         <div className="px-6 py-3.5 bg-slate-950 border-b border-slate-900 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <div className="w-8 h-8 rounded-xl  from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
               <span className="font-black text-white text-xs tracking-wider">NAS</span>
             </div>
             <div>
@@ -779,7 +779,7 @@ export default function App() {
             
             {/* Active task badge counter */}
             {tasks.filter(t => t.status === 'active').length > 0 && (
-              <span className="absolute top-0.5 right-2 w-4 h-4 rounded-full bg-blue-650 border border-slate-950 flex items-center justify-center text-[8px] font-bold text-white font-mono scale-90">
+              <span className="absolute top-0.5 right-2 w-4 h-4 rounded-full bg-blue-500 border border-slate-950 flex items-center justify-center text-[8px] font-bold text-white font-mono scale-90">
                 {tasks.filter(t => t.status === 'active').length}
               </span>
             )}

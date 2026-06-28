@@ -1,3 +1,5 @@
+import TaskList from "./components/TaskList";
+
 export interface FileItem {
   id: string;
   name: string;
@@ -68,6 +70,7 @@ export interface NasTask {
   speed?: string; // e.g. "12.4 MB/s"
   eta?: string; // e.g. "4m 12s"
   status: 'active' | 'paused' | 'completed' | 'queued';
+  
 }
 
 export interface SystemStats {
@@ -94,3 +97,4 @@ export interface SystemLog {
   level: 'info' | 'warning' | 'error';
   message: string;
 }
+

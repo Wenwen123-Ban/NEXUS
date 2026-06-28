@@ -1,0 +1,26 @@
+{
+  // Use workspace TypeScript version (requires `npm install` first)
+  "typescript.tsdk": "node_modules/typescript/lib",
+  // Ensure ESLint validates TS/JS React files
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  // Tailwind support for React TSX files
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript",
+    "javascriptreact": "javascript",
+    "html": "html"
+  },
+  "tailwindCSS.experimental.configFile": "./tailwind.config.cjs",
+  "tailwindCSS.validate": true,
+  // Avoid built-in CSS warnings for Tailwind directives like @theme
+  "css.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  // Prefer workspace formatter if present
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+}

@@ -1,39 +1,43 @@
-import React, { useState } from 'react';
-import { 
-  Download, 
-  Play, 
-  Pause, 
-  X, 
-  Plus, 
-  CheckCircle, 
-  AlertCircle, 
-  TrendingDown, 
-  TrendingUp, 
-  Clock, 
-  FolderSync,
-  Heart
+// ✅ Fixed imports
+  // ← now works after Step 1
+import { useState, FormEvent } from 'react';
+import {
+  Download,
+  Play,
+  Pause,
+  X,
+  Plus,
+  CheckCircle,
+  AlertCircle,
+  TrendingDown,
+  TrendingUp,
+  Clock,
+  RefreshCw,    // ← replaces FolderSync if needed
+  Heart,
+  TaskListProps,
 } from 'lucide-react';
-import { NasTask } from '../types';
+import { NasTask } from '../types'; 
 
 interface TaskListProps {
-  tasks: NasTask[];
-  onAddTask: (link: string) => void;
-  onPauseTask: (id: string) => void;
-  onResumeTask: (id: string) => void;
-  onCancelTask: (id: string) => void;
+  tasks:          NasTask[];
+  onAddTask:      (link: string) => void;
+  onPauseTask:    (id: string) => void;
+  onResumeTask:   (id: string) => void;
+  onCancelTask:   (id: string) => void;
 }
 
-export default function TaskList({ 
-  tasks, 
-  onAddTask, 
-  onPauseTask, 
-  onResumeTask, 
-  onCancelTask 
+export default function TaskList({
+  tasks,
+  onAddTask,
+  onPauseTask,
+  onResumeTask,
+  onCancelTask,
 }: TaskListProps) {
   const [downloadLink, setDownloadLink] = useState('');
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen]       = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ✅ FormEvent properly typed
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!downloadLink.trim()) return;
     onAddTask(downloadLink.trim());
@@ -41,24 +45,16 @@ export default function TaskList({
     setIsAddOpen(false);
   };
 
+  // ✅ RefreshCw replaces FolderSync
   const getTaskIcon = (type: string) => {
     switch (type) {
-      case 'download':
-        return <Download className="w-5 h-5 text-blue-400" />;
-      case 'backup':
-        return <CheckCircle className="w-5 h-5 text-emerald-400" />;
-      case 'raid':
-        return <AlertCircle className="w-5 h-5 text-amber-400 animate-pulse" />;
-      case 'sync':
-        return <FolderSync className="w-5 h-5 text-indigo-400" />;
-      default:
-        return <Download className="w-5 h-5 text-slate-400" />;
+      case 'download': return <Download   className="w-5 h-5 text-blue-400" />;
+      case 'backup':   return <CheckCircle className="w-5 h-5 text-emerald-400" />;
+      case 'raid':     return <AlertCircle className="w-5 h-5 text-amber-400 animate-pulse" />;
+      case 'sync':     return <RefreshCw   className="w-5 h-5 text-indigo-400" />;
+      default:         return <Download   className="w-5 h-5 text-slate-400" />;
     }
   };
-
-  const activeDownloads = tasks.filter(t => t.type === 'download' && t.status === 'active');
-  const activeDownloadsCount = activeDownloads.length;
-
   return (
     <div className="space-y-4" id="nas-tasks-list">
       {/* Header */}
@@ -119,7 +115,7 @@ export default function TaskList({
         {tasks.map((task) => (
           <div 
             key={task.id}
-            className={`bg-slate-900/40 border rounded-3xl p-4 space-y-3 transition duration-350 ${
+            className={`bg-slate-900/40 border rounded-3xl p-4 space-y-3 transition duration-300 ${
               task.status === 'active' ? 'border-slate-800/80' : 'border-slate-900/40 opacity-60'
             }`}
           >

@@ -1,0 +1,13 @@
+{
+  "tailwindCSS.validate": true,
+  "tailwindCSS.includeLanguages": {
+    "typescript": "html",
+    "typescriptreact": "html",
+    "javascriptreact": "html",
+    "html": "html"
+  },
+  "tailwindCSS.experimental.configFile": "./nexus/app/tailwind.config.cjs",
+  "css.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore"
+}
