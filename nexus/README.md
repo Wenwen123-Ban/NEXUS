@@ -18,7 +18,7 @@ python main.py
 - [x] Phase 2 — System Monitor
 - [x] Phase 3 — Network Tools
 - [x] Phase 4 — NAS Manager
-- [ ] Phase 5 — Security Center
+- [x] Phase 5 — Security Center
 - [ ] Phase 6 — Task Scheduler
 
 
@@ -26,3 +26,8 @@ python main.py
 - [x] Disk usage monitor validates the configured NAS path and reports used, free, total, percentage, and threshold status.
 - [x] File browser lists NAS folders/files, supports safe navigation, and previews text files without leaving the NAS root.
 - [x] Folder sync copies new or updated local files into the NAS path while preserving metadata.
+
+## Phase 5 Checklist — Security Center
+- [x] SSH login monitor reads the configured authentication log and summarizes failed password attempts by source IP and username.
+- [x] Firewall rules viewer detects common local firewall backends (`ufw`, `iptables`, or `nft`) and displays available rules.
+- [x] Intrusion log parser scans configured security logs for suspicious terms and groups matching events by IP address.
