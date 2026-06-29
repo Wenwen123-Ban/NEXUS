@@ -15,3 +15,6 @@ data/.nas_session_secret
 # v1.1 — identity and peer data (private, machine-specific)
 data/users.json
 data/peers.json
+
+# Local runtime data
+nexus/data/running_apps.json

@@ -6,8 +6,18 @@ from __future__ import annotations
 
 from core.display import banner, clear, menu, warn
 from core.logger import log
+from modules.apprunner.process_store import load_apps
+from modules.apprunner.runner import launch_app
 from modules.identity.auth import is_first_run, login
 from modules.identity.user_setup import run_setup
+
+
+def run_auto_start_apps() -> None:
+    """Launch any apps flagged as auto_start on NEXUS startup."""
+    for app in load_apps():
+        if app.get("auto_start") and app.get("status") != "running":
+            print(f"  [→] Auto-starting {app['name']}...")
+            launch_app(app["name"], app["file"], app.get("port", 5000))
 
 
 def main() -> None:
@@ -21,6 +31,8 @@ def main() -> None:
         print("\n  [✗] Access denied. Exiting NEXUS.")
         return
 
+    run_auto_start_apps()
+
     while True:
         clear()
         banner(username=str(user.get("username", "")))
@@ -33,6 +45,7 @@ def main() -> None:
                 "System Monitor",
                 "Email Tools",
                 "Task Scheduler",
+                "App Runner",
                 "NEXUS LINK — LAN Chat",
                 "My Identity",
             ],
@@ -63,10 +76,14 @@ def main() -> None:
 
             scheduler_menu()
         elif choice == "7":
+            from modules.apprunner import apprunner_menu
+
+            apprunner_menu()
+        elif choice == "8":
             from modules.link import link_menu
 
             link_menu(user)
-        elif choice == "8":
+        elif choice == "9":
             from modules.identity import identity_menu
 
             user = identity_menu(user)
