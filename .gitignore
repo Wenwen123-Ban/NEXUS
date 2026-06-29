@@ -1,6 +1,27 @@
-# Repo-level ignores for NEXUS workspace
-# Ignore the local App Runner state file
-nexus/data/running_apps.json
+# Global .gitignore for NEXUS repository
 
-# Keep other nexus local data ignored as well
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+
+# Node artifacts
+node_modules/
+nexus/app/node_modules/
+
+# Nexus local data (machine-specific)
+nexus/data/nexus.log
+nexus/data/config.json
+nexus/data/nas_users.json
+nexus/data/nas_tasks.json
+nexus/data/.nas_session_secret
+nexus/data/users.json
+nexus/data/peers.json
+
+# App Runner persisted state (ignore at repo root)
+nexus/data/running_apps.json
+# Also ignore other local JSON state files under nexus/data
 nexus/data/*.json
