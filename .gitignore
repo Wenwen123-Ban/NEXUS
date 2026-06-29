@@ -1,0 +1,6 @@
+# Repo-level ignores for NEXUS workspace
+# Ignore the local App Runner state file
+nexus/data/running_apps.json
+
+# Keep other nexus local data ignored as well
+nexus/data/*.json
