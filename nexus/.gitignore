@@ -17,4 +17,4 @@ data/users.json
 data/peers.json
 
 # Local runtime data
-nexus/data/running_apps.json
+data/running_apps.json

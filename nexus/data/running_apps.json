@@ -1,1 +1,22 @@
-[]
+[
+    {
+        "id": "nutri",
+        "name": "Nutri",
+        "file": "C:\\nutri_tracker\\app.py",
+        "pid": null,
+        "port": 5000,
+        "started_at": "2026-06-29 09:46:47",
+        "status": "stopped",
+        "auto_start": false
+    },
+    {
+        "id": "nutri",
+        "name": "Nutri",
+        "file": "C:\\nutri_tracker\\app.py",
+        "pid": 20360,
+        "port": 5000,
+        "started_at": "2026-06-29 09:50:52",
+        "status": "running",
+        "auto_start": false
+    }
+]
