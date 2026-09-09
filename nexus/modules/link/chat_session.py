@@ -3,12 +3,10 @@
 # ============================================================
 from __future__ import annotations
 
-import threading
 from datetime import datetime
 
 from core.display import clear, error, pause, section, success, table, warn
 from modules.identity.auth import load_user
-from modules.link.listener import start_listener, stop_listener
 from modules.link.peer_discovery import load_peers, save_peer
 from modules.link.sender import send_message
 
@@ -42,36 +40,30 @@ def open_chat(user: dict | None = None) -> None:
         return
     peer_ip, peer_port = target
     save_peer("Manual Peer", peer_ip, peer_port, "unknown")
-    listener = threading.Thread(target=start_listener, kwargs={"port": int(current.get("port", 9876)), "username": str(current.get("username", "NEXUS"))}, daemon=True)
-    listener.start()
     section(f"NEXUS LINK CHAT → {peer_ip}:{peer_port}")
     _help()
-    try:
-        while True:
-            text = input(f"  {current.get('username', 'You')} > ").strip()
-            if not text:
-                continue
-            if text == "/exit":
-                break
-            if text == "/peers":
-                peers = load_peers()
-                table(["Name", "IP", "Port", "Status", "Last Seen"], [[p.get("username", "?"), p.get("ip", ""), p.get("port", 9876), p.get("status", "?"), p.get("last_seen", "")] for p in peers])
-                continue
-            if text == "/clear":
-                clear()
-                continue
-            if text == "/myip":
-                success(f"My IP: {current.get('ip', '')}:{current.get('port', 9876)}")
-                continue
-            if text == "/help":
-                _help()
-                continue
-            sent = send_message(peer_ip, peer_port, str(current.get("username", "NEXUS")), text)
-            now = datetime.now().strftime("%H:%M")
-            if sent:
-                print(f"  [{now}] You: {text}")
-            else:
-                warn("Message could not be delivered. Peer may be offline.")
-    finally:
-        stop_listener()
-        listener.join(timeout=1.5)
+    while True:
+        text = input(f"  {current.get('username', 'You')} > ").strip()
+        if not text:
+            continue
+        if text == "/exit":
+            break
+        if text == "/peers":
+            peers = load_peers()
+            table(["Name", "IP", "Port", "Status", "Last Seen"], [[p.get("username", "?"), p.get("ip", ""), p.get("port", 9876), p.get("status", "?"), p.get("last_seen", "")] for p in peers])
+            continue
+        if text == "/clear":
+            clear()
+            continue
+        if text == "/myip":
+            success(f"My IP: {current.get('ip', '')}:{current.get('port', 9876)}")
+            continue
+        if text == "/help":
+            _help()
+            continue
+        sent = send_message(peer_ip, peer_port, str(current.get("username", "NEXUS")), text)
+        now = datetime.now().strftime("%H:%M")
+        if sent:
+            print(f"  [{now}] You: {text}")
+        else:
+            warn("Message could not be delivered. Peer may be offline.")
