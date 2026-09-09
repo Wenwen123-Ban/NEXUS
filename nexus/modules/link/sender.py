@@ -14,6 +14,10 @@ def send_message(target_ip: str, port: int, username: str, message: str) -> bool
     try:
         with socket.create_connection((target_ip, port), timeout=5) as sock:
             sock.sendall(payload[:1024])
+            sock.settimeout(5)
+            response = sock.recv(1024).decode("utf-8", errors="replace")
+            if response != "NEXUS_OK":
+                raise OSError(f"peer rejected the message: {response or 'no acknowledgement'}")
         log(f"NEXUS LINK sent message to {target_ip}:{port}.")
         return True
     except OSError as exc:
